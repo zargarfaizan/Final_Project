@@ -1,0 +1,32 @@
+# PersistentVolume definition to allocate storage for MongoDB
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  # Name of the PersistentVolume
+  name: mongo-pv
+spec:
+  # Defines the capacity of the PersistentVolume
+  capacity:
+    storage: 1Gi  # Allocated storage size
+  # Defines how the PersistentVolume can be accessed
+  accessModes:
+    - ReadWriteOnce  # Allows one node to write at a time
+  # Specifies the storage location on the host machine
+  hostPath:
+    path: "/data/mongo"  # Directory for MongoDB data persistence
+
+---
+# PersistentVolumeClaim to request storage for MongoDB
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  # Name of the PersistentVolumeClaim
+  name: mongo-pvc
+spec:
+  # Defines how the storage can be accessed
+  accessModes:
+    - ReadWriteOnce  # Matches the PersistentVolume's access mode
+  # Requests specific storage resources
+  resources:
+    requests:
+      storage: 1Gi  # Amount of storage requested

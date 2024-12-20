@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  # Increased replicas to ensure high availability
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        # Backend container image
+        image: hemanthkolli99/backend:latest
+        ports:
+        - containerPort: 3001
+        # Replaced hardcoded MongoDB URI with Kubernetes Secrets for secure configuration
+        env:
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: uri
+        # Configured resource requests and limits for efficient resource utilization
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+        # Added volume mount to store persistent data
+        volumeMounts:
+        - name: mongo-storage
+          mountPath: /data/db  # Path inside the container for MongoDB data storage
+      # Volumes definition for the PersistentVolumeClaim
+      volumes:
+      - name: mongo-storage
+        persistentVolumeClaim:
+          claimName: mongo-pvc  # Links the PersistentVolumeClaim to the pod
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-secret
+type: Opaque
+# Securely stores MongoDB URI (base64-encoded value)
+data:
+  uri: bW9uZ29kYjovL21vbmdvOjI3MDE3L2FwcG9pbnRtZW50cw==
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+spec:
+  # Targets the backend deployment
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  # Sets minimum and maximum replicas for scaling
+  minReplicas: 2
+  maxReplicas: 5
+  # Configures auto-scaling based on CPU utilization
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80

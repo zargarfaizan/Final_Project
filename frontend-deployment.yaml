@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Name of the frontend deployment
+  name: frontend
+  labels:
+    # Label to identify the frontend app
+    app: frontend
+spec:
+  # Increased replicas to ensure fault tolerance and high availability
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        # Label to identify the pods of this deployment
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        # Frontend container image
+        image: hemanthkolli99/frontend:latest
+        ports:
+        - containerPort: 3000
+        # Configured resource requests and limits for scalability
+        resources:
+          requests:
+            memory: "256Mi" # Minimum memory required for stable operation
+            cpu: "250m"    # Minimum CPU required for stable operation
+          limits:
+            memory: "512Mi" # Maximum memory allocated for scalability
+            cpu: "500m"    # Maximum CPU allocated for scalability
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  # Added HPA to enable frontend service scaling
+  name: frontend-hpa
+spec:
+  # Targets the frontend deployment for auto-scaling
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  # Sets minimum and maximum replicas for scaling
+  minReplicas: 2
+  maxReplicas: 5
+  # Configures auto-scaling based on CPU utilization
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # Name of the service exposing the frontend
+  name: frontend-service
+spec:
+  selector:
+    # Selects pods with the label app: frontend
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    # Maps the service port to the container port
+    targetPort: 3000
+  # ClusterIP service type for internal communication within the cluster
+  type: ClusterIP
